@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <script src="
+https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js
+"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <style>
+            .chart-container {
+                width: 100%;
+                height: 400px;
+                margin-bottom: 20px;
+            }
+            #main {
+                display: grid;
+                grid-template-columns: repeat(3, 30%);
+                gap: 5px;
+            }
+        </style>
+        <title>20250917台北市各監測站點空氣汙染指數</title>
+    </head>
+    <body>
+        <select id="selectedPollutant" class="border p-2 m-5">
+            <option value="">選擇污染物</option>
+        </select>
+        <button id="searchButton" class="border p-2">搜尋</button>
+
+        <div id="main"></div>
+        <script>
+            let charts = {};
+            fetch("tldep_AQI_DAYHour.json")
+                .then((response) => response.json())
+                .then((data) => {
+                    // 取得所有站名
+                    const stations = [
+                        ...new Set(data.map((item) => item["站名"])),
+                    ];
+                    // 取得所有污染物
+                    const pollutants = [
+                        ...new Set(data.map((item) => item["中文指標物"])),
+                    ];
+                    // 將站名加入下拉選單
+                    // const stationSelect =
+                    //     document.getElementById("selectedStation");
+                    // stations.forEach((station) => {
+                    //     const option = document.createElement("option");
+                    //     option.value = station;
+                    //     option.text = station;
+                    //     stationSelect.appendChild(option);
+                    // });
+                    const allStations = document.getElementById("main");
+                    stations.forEach((station) => {
+                        const div = document.createElement("div");
+                        div.id = `${station}`;
+                        div.className = "chart-container";
+                        allStations.appendChild(div);
+                        // 初始化圖表
+                        charts[station] = echarts.init(div);
+                    });
+                    // 將污染物加入下拉選單
+                    const pollutantSelect =
+                        document.getElementById("selectedPollutant");
+                    pollutants.forEach((pollutant) => {
+                        const option = document.createElement("option");
+                        option.value = pollutant;
+                        option.text = pollutant;
+                        pollutantSelect.appendChild(option);
+                    });
+
+                    function updateChart() {
+                        const selectedPollutant = pollutantSelect.value;
+                        if (!selectedPollutant) {
+                            return;
+                        }
+                        stations.forEach((station) => {
+                            var filterData = data.filter(
+                                (item) =>
+                                    item["站名"] === station &&
+                                    item["中文指標物"] === selectedPollutant
+                            );
+                            // 排序資料按時間
+                            filterData.sort(
+                                (a, b) =>
+                                    new Date(a["時間"]) - new Date(b["時間"])
+                            );
+                            const times = filterData.map((item) => {
+                                const date = new Date(item["時間"]);
+                                return date.getHours() + ":00";
+                            });
+                            if (filterData.length === 0) {
+                                charts[station].setOption({
+                                    title: {
+                                        text: `站點: ${station} - 無資料`,
+                                    },
+                                });
+                                return;
+                            }
+
+                            charts[station].setOption({
+                                title: {
+                                    text: `站點: ${station}`,
+                                },
+                                tooltip: {
+                                    trigger: "axis",
+                                    formatter: function (params) {
+                                        return `時間：${params[0].name}<br/>
+                                        ${selectedPollutant}：${params[0].value}`;
+                                    },
+                                },
+                                xAxis: {
+                                    data: times,
+                                    type: "category",
+                                    name: "時間",
+                                },
+                                yAxis: {
+                                    name: "指標值",
+                                    type: "value",
+                                    min: 0,
+                                    max: 100,
+                                    interval: 10,
+                                    splitLine: { show: true },
+                                },
+                                series: [
+                                    {
+                                        name: "指標值",
+                                        type: "line",
+                                        data: filterData.map(
+                                            (item) => item["指標值"]
+                                        ),
+                                    },
+                                ],
+                            });
+                        });
+                    }
+                    document
+                        .getElementById("searchButton")
+                        .addEventListener("click", updateChart);
+                });
+        </script>
+    </body>
+</html>
