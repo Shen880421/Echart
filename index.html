@@ -22,6 +22,7 @@ https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js
         <title>20250917台北市各監測站點空氣汙染指數</title>
     </head>
     <body>
+        <p id="sum" class="p-2 m-5 text-center"></p>
         <select id="selectedPollutant" class="border p-2 m-5">
             <option value="">選擇污染物</option>
         </select>
@@ -33,6 +34,9 @@ https://cdn.jsdelivr.net/npm/echarts@6.0.0/dist/echarts.min.js
             fetch("tldep_AQI_DAYHour.json")
                 .then((response) => response.json())
                 .then((data) => {
+                    document.getElementById(
+                        "sum"
+                    ).innerText = `台北市各監測站點空氣汙染指數，資料筆數: ${data.length}`;
                     // 取得所有站名
                     const stations = [
                         ...new Set(data.map((item) => item["站名"])),
